@@ -1,6 +1,6 @@
 """Schemas for distill API."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BriefItemSchema(BaseModel):
@@ -25,4 +25,24 @@ class IngestBookmarksResponse(BaseModel):
     """Response from bookmark ingest."""
 
     ingested: int
+    total: int
+
+
+class BookmarkSchema(BaseModel):
+    """Bookmark in list response."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    url: str
+    title: str
+    folder: str
+    status: str
+    category: str = ""
+
+
+class BookmarkListResponse(BaseModel):
+    """Paginated bookmark list."""
+
+    items: list[BookmarkSchema]
     total: int

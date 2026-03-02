@@ -13,7 +13,7 @@ Distillation helps tame information overload by distilling bookmarks and web con
 ### Goals
 
 - [x] Phase 1: Bookmark export ingest (HTML/JSON), content fetch, direct distill to brief
-- [ ] Phase 2: Interactive chat agent, more sources (news, blogs)
+- [ ] Phase 2: Interactive chat agent (MCP + Claude Desktop), more sources (news, blogs)
 - [ ] Phase 3: n8n webhook, email newsletter integration
 
 ### Non-Goals
@@ -23,15 +23,17 @@ Distillation helps tame information overload by distilling bookmarks and web con
 
 ### Technical Constraints
 
-- Deployment: Standalone (HTTP API) + n8n (HTTP Request node)
+- Deployment: Standalone (HTTP API) + n8n (HTTP Request node) + MCP (Claude Desktop)
 - Database: SQLite for MVP
-- LLM: OpenAI (gpt-4o-mini) via Instructor for structured outputs
+- LLM: Gemini (gemini-2.5-flash) via Instructor for structured outputs
+- MCP: FastMCP for Claude Desktop integration
 
 ### Domain Context
 
 - **Bookmark export**: Netscape HTML (Chrome/Firefox) or Chrome JSON
-- **Content extraction**: Trafilatura for main-content extraction
+- **Content extraction**: Fetch + minimal strip; AI (Gemini) extracts and summarizes
 - **Brief**: Structured overview + per-item summaries, key points, keep/discard
+- **Interactive mode**: Chat with Claude via MCP tools (list, distill, summarize, discard)
 
 ---
 

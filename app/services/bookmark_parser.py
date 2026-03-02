@@ -1,13 +1,11 @@
 """Parse bookmark exports (Netscape HTML and Chrome JSON)."""
 
 import json
+from collections.abc import Generator
 from html.parser import HTMLParser
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
 
 
 class BookmarkEntry(BaseModel):
@@ -19,32 +17,36 @@ class BookmarkEntry(BaseModel):
     added: str | None = None
 
 
-def parse_netscape_html(html: str) -> "Generator[BookmarkEntry, None, None]":
+def parse_netscape_html(html: str) -> Generator[BookmarkEntry]:
     """Parse Netscape-style bookmark HTML (Chrome, Firefox export)."""
     parser = _NetscapeHTMLParser()
     parser.feed(html)
     yield from parser.bookmarks
 
 
-def parse_chrome_json(data: str) -> "Generator[BookmarkEntry, None, None]":
+def parse_chrome_json(data: str) -> Generator[BookmarkEntry]:
     """Parse Chrome bookmarks.json format."""
     obj = json.loads(data)
     roots = obj.get("roots", {})
     for key in ("bookmark_bar", "other", "synced"):
         if key in roots and isinstance(roots[key], dict):
-            folder_name = {"bookmark_bar": "Bookmarks Bar", "other": "Other", "synced": "Synced"}.get(key, key)
+            folder_name = {
+                "bookmark_bar": "Bookmarks Bar",
+                "other": "Other",
+                "synced": "Synced",
+            }.get(key, key)
             yield from _extract_chrome_bookmarks(roots[key], folder_name)
 
 
 def _extract_chrome_bookmarks(
     node: dict[str, Any],
     folder_path: str,
-) -> "Generator[BookmarkEntry, None, None]":
+) -> Generator[BookmarkEntry]:
     """Recursively extract bookmarks from Chrome node (folder or url)."""
     for child in node.get("children", []):
         if not isinstance(child, dict):
             continue
-        child_dict = cast(dict[str, Any], child)
+        child_dict = cast("dict[str, Any]", child)
         if child_dict.get("type") == "url":
             child_url: str = child_dict.get("url") or ""
             if child_url:

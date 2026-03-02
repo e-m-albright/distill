@@ -65,7 +65,7 @@ async def distill(
     """Fetch content from stored bookmarks, distill into a brief."""
     from sqlalchemy import select
 
-    result = await db.execute(select(Bookmark).limit(limit))
+    result = await db.execute(select(Bookmark).where(Bookmark.status == "active").limit(limit))
     bookmarks = result.scalars().all()
     if not bookmarks:
         return DistilledBriefSchema(

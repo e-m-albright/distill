@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.routes import health, ingest
+from app.api.routes import bookmarks, health, ingest
 from app.config import settings
 from app.core.logging import setup_logging
 from app.db.session import init_db
@@ -26,6 +26,7 @@ app = FastAPI(
 
 app.include_router(health.router)
 app.include_router(ingest.router)
+app.include_router(bookmarks.router)
 
 
 def main() -> None:

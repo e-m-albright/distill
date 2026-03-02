@@ -1,8 +1,8 @@
-"""Fetch and extract main content from URLs."""
+"""Fetch content from URLs. AI handles extraction and summarization."""
 
 import httpx
 import structlog
-import trafilatura
+from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
 from app.config import settings
@@ -12,7 +12,7 @@ log = structlog.get_logger()
 
 
 class ExtractedContent(BaseModel):
-    """Extracted main content from a URL."""
+    """Fetched content from a URL (minimal processing; AI does extraction)."""
 
     url: str
     title: str
@@ -22,7 +22,7 @@ class ExtractedContent(BaseModel):
 
 
 async def fetch_and_extract(url: str) -> ExtractedContent:
-    """Fetch URL and extract main content using trafilatura."""
+    """Fetch URL and return content. Strips scripts/styles only; AI extracts meaning."""
     try:
         async with httpx.AsyncClient(
             timeout=settings.fetch_timeout_seconds,
@@ -38,38 +38,19 @@ async def fetch_and_extract(url: str) -> ExtractedContent:
         if len(html) > settings.max_content_length:
             html = html[: settings.max_content_length] + "..."
 
-        result = trafilatura.extract(
-            html,
-            include_comments=False,
-            include_tables=False,
-            no_fallback=False,
-        )
-        metadata = trafilatura.extract_metadata(html)
-
-        if result:
-            title = (metadata.title if metadata else None) or url
-            return ExtractedContent(
-                url=url,
-                title=title,
-                text=result.strip(),
-                success=True,
-            )
-
-        # Fallback: return first chunk of text
-        from bs4 import BeautifulSoup
-
         soup = BeautifulSoup(html, "html.parser")
-        for tag in soup(["script", "style", "nav", "header", "footer"]):
+        for tag in soup(["script", "style", "noscript"]):
             tag.decompose()
         text = soup.get_text(separator="\n", strip=True)
-        if len(text) > 5000:
-            text = text[:5000] + "..."
-        title = (metadata.title if metadata else None) or url
+        if len(text) > 50_000:
+            text = text[:50_000] + "..."
+        title = (soup.title.string if soup.title else None) or url
+
         return ExtractedContent(
             url=url,
-            title=title,
-            text=text or "(No content extracted)",
-            success=bool(text),
+            title=title.strip() if title else url,
+            text=text or "(No content)",
+            success=bool(text.strip()),
         )
 
     except httpx.HTTPError as e:
@@ -82,7 +63,7 @@ async def fetch_and_extract(url: str) -> ExtractedContent:
             error=str(e),
         )
     except Exception as e:
-        log.exception("extract_failed", url=url)
+        log.exception("fetch_failed", url=url)
         return ExtractedContent(
             url=url,
             title=url,

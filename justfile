@@ -44,6 +44,10 @@ add-dev *packages:
 dev:
     uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
+# Run MCP server (stdio) for Claude Desktop
+mcp:
+    uv run python -m app.mcp_server
+
 # Start with specific port
 dev-port port="8000":
     uv run uvicorn app.main:app --reload --host 0.0.0.0 --port {{port}}

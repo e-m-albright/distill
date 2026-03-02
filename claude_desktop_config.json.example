@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "distillation": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "app.mcp_server"],
+      "cwd": "/path/to/distillation",
+      "env": {
+        "GOOGLE_API_KEY": "$GOOGLE_API_KEY"
+      }
+    }
+  }
+}

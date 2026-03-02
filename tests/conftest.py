@@ -12,7 +12,7 @@ from app.main import app
 
 
 @pytest.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
+async def db_session() -> AsyncGenerator[AsyncSession]:
     """Create a test database session."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
@@ -28,7 +28,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     """Create a test client with overridden database."""
 
     async def override_get_db():

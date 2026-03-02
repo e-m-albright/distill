@@ -9,7 +9,7 @@ name = "distillation"
 version = "0.1.0"
 description = "Bookmark and content distillation — tame information overload"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 authors = [{ name = "Your Name", email = "you@example.com" }]
 
@@ -25,12 +25,12 @@ dependencies = [
     "aiosqlite>=0.20.0",
     # HTTP Client
     "httpx>=0.28.0",
-    # AI / LLM
-    "openai>=1.0.0",
-    "instructor>=1.0.0",
-    # Content Extraction
-    "trafilatura>=2.0.0",
+    # AI / LLM (Gemini via Instructor)
+    "instructor[google-genai]>=1.0.0",
+    # Content (fetch only; AI extracts)
     "beautifulsoup4>=4.12.0",
+    # MCP server for Claude Desktop
+    "fastmcp>=3.0.0",
     # Logging
     "structlog>=24.0.0",
     # Utilities
@@ -70,6 +70,7 @@ ml = [
 
 [project.scripts]
 distillation = "app.main:main"
+distillation-mcp = "app.mcp_server:main"
 
 # =============================================================================
 # UV Configuration
@@ -92,7 +93,7 @@ dev-dependencies = [
 # =============================================================================
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 100
 indent-width = 4
 
@@ -144,7 +145,7 @@ line-ending = "auto"
 # =============================================================================
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 typeCheckingMode = "strict"
 reportMissingImports = true
 reportMissingTypeStubs = false

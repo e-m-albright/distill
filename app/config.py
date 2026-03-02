@@ -19,9 +19,8 @@ class Settings(BaseSettings):
     # Database (SQLite for MVP)
     database_url: str = "sqlite+aiosqlite:///./distillation.db"
 
-    # LLM (OpenAI by default; set ANTHROPIC_API_KEY for Claude)
-    openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
+    # LLM (Gemini). Also read from GOOGLE_API_KEY env.
+    google_api_key: str | None = None
 
     # Content fetching
     fetch_timeout_seconds: float = 30.0
