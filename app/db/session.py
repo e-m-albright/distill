@@ -1,6 +1,7 @@
 """Database session and connection."""
 
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 
@@ -17,6 +18,14 @@ from app.db.base import Base
 _db_url = settings.database_url
 if _db_url.startswith("sqlite://") and "aiosqlite" not in _db_url:
     _db_url = _db_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+
+# Resolve relative SQLite paths to absolute (project root) so DB works when cwd differs
+if _db_url.startswith("sqlite") and ":///./" in _db_url:
+    _rel_path = _db_url.split(":///./", 1)[1]
+    _project_root = Path(__file__).resolve().parent.parent.parent
+    _abs_path = (_project_root / _rel_path).resolve()
+    _abs_path.parent.mkdir(parents=True, exist_ok=True)
+    _db_url = _db_url.replace(f":///./{_rel_path}", f":///{_abs_path}", 1)
 
 engine = create_async_engine(
     _db_url,

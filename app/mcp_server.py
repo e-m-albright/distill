@@ -193,7 +193,7 @@ async def distill(
     if not bookmarks:
         return "No active bookmarks to distill. Ingest and organize first."
 
-    sem = asyncio.Semaphore(5)
+    sem = asyncio.Semaphore(10)
 
     async def get_content(b: Bookmark) -> ExtractedContent:
         if use_cache and b.cached_summary and b.cached_at:

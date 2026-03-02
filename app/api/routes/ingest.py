@@ -75,7 +75,7 @@ async def distill(
         )
 
     # Fetch content in parallel (bounded concurrency)
-    sem = asyncio.Semaphore(5)
+    sem = asyncio.Semaphore(10)
 
     async def fetch_one(b: Bookmark) -> ExtractedContent:
         async with sem:
