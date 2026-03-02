@@ -6,30 +6,32 @@ Read all `.cursor/rules/*.mdc` files for process, safety, and coding conventions
 
 ## Project Context
 
-<!-- Fill this in to describe YOUR project. Delete sections that don't apply. -->
-
 ### Overview
 
-<!-- What does this project do? What problem does it solve? Who is it for? -->
+Distillation helps tame information overload by distilling bookmarks and web content into briefs and summaries. Ingest bookmark exports, fetch content, filter low-value items, and get AI-generated briefs.
 
 ### Goals
 
-- [ ] Goal 1
-- [ ] Goal 2
+- [x] Phase 1: Bookmark export ingest (HTML/JSON), content fetch, direct distill to brief
+- [ ] Phase 2: Interactive chat agent, more sources (news, blogs)
+- [ ] Phase 3: n8n webhook, email newsletter integration
 
 ### Non-Goals
 
-- Not building X
-- Not supporting Y
+- Not a full bookmark manager (no sync with browser)
+- Not building a general-purpose RAG system
 
 ### Technical Constraints
 
-- Deployment target: [platform]
-- Must work with: [existing systems]
+- Deployment: Standalone (HTTP API) + n8n (HTTP Request node)
+- Database: SQLite for MVP
+- LLM: OpenAI (gpt-4o-mini) via Instructor for structured outputs
 
 ### Domain Context
 
-<!-- Key terms, business rules, entities, and relationships -->
+- **Bookmark export**: Netscape HTML (Chrome/Firefox) or Chrome JSON
+- **Content extraction**: Trafilatura for main-content extraction
+- **Brief**: Structured overview + per-item summaries, key points, keep/discard
 
 ---
 

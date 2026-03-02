@@ -112,28 +112,8 @@ test-fast:
     uv run pytest -m "not slow"
 
 # -----------------------------------------------------------------------------
-# Database
+# Database (tables created on startup; no migrations for MVP)
 # -----------------------------------------------------------------------------
-
-# Generate a new migration
-db-migrate message:
-    uv run alembic revision --autogenerate -m "{{message}}"
-
-# Run all pending migrations
-db-upgrade:
-    uv run alembic upgrade head
-
-# Rollback one migration
-db-downgrade:
-    uv run alembic downgrade -1
-
-# Show migration history
-db-history:
-    uv run alembic history
-
-# Show current migration
-db-current:
-    uv run alembic current
 
 # -----------------------------------------------------------------------------
 # Documentation
