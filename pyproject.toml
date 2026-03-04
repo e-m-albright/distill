@@ -140,6 +140,9 @@ lines-after-imports = 2
 "alembic/**/*.py" = [
     "ERA001", # Commented-out code in migrations is OK
 ]
+"app/mcp_server.py" = [
+    "E402",  # structlog must be configured before app imports (MCP stdout)
+]
 
 [tool.ruff.format]
 quote-style = "double"

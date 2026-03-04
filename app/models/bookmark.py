@@ -19,8 +19,8 @@ class Bookmark(Base):
     folder: Mapped[str] = mapped_column(String(512), default="")
     added: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(
-        String(32), default="active"
-    )  # active | discarded | promoted
+        String(32), default="unreviewed"
+    )  # unreviewed | discard | preview | view
     category: Mapped[str] = mapped_column(String(128), default="", index=True)  # user/AI group
     cached_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     cached_key_points: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array

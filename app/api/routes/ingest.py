@@ -19,7 +19,7 @@ from app.services.content_fetcher import ExtractedContent, fetch_and_extract
 from app.services.distill_service import distill_content
 
 
-router = APIRouter(prefix="", tags=["ingest", "distill"])
+router = APIRouter(prefix="", tags=["ingest", "preview"])
 
 
 @router.post("/ingest/bookmarks", response_model=IngestBookmarksResponse)
@@ -58,23 +58,25 @@ async def ingest_bookmarks(
 
 
 @router.post("/distill", response_model=DistilledBriefSchema)
-async def distill(
+@router.post("/preview", response_model=DistilledBriefSchema)
+async def preview(
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
 ) -> DistilledBriefSchema:
-    """Fetch content from stored bookmarks, distill into a brief."""
+    """Fetch content from stored bookmarks, preview (summarize) per link."""
     from sqlalchemy import select
 
-    result = await db.execute(select(Bookmark).where(Bookmark.status == "active").limit(limit))
+    result = await db.execute(
+        select(Bookmark)
+        .where(
+            Bookmark.status.in_(["unreviewed", "preview"]),
+        )
+        .limit(limit)
+    )
     bookmarks = result.scalars().all()
     if not bookmarks:
-        return DistilledBriefSchema(
-            overview="No bookmarks to distill. Ingest some first via POST /ingest/bookmarks.",
-            items=[],
-            discarded_count=0,
-        )
+        return DistilledBriefSchema(items=[])
 
-    # Fetch content in parallel (bounded concurrency)
     sem = asyncio.Semaphore(10)
 
     async def fetch_one(b: Bookmark) -> ExtractedContent:
@@ -84,8 +86,4 @@ async def distill(
     contents = await asyncio.gather(*[fetch_one(b) for b in bookmarks])
     brief = await distill_content(list(contents))
 
-    return DistilledBriefSchema(
-        overview=brief.overview,
-        items=[BriefItemSchema.model_validate(i) for i in brief.items],
-        discarded_count=brief.discarded_count,
-    )
+    return DistilledBriefSchema(items=[BriefItemSchema.model_validate(i) for i in brief.items])

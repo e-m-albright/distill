@@ -1,4 +1,6 @@
-"""Bookmark list, discard, and single-URL summary endpoints."""
+"""Bookmark list, discard, restore, and single-URL summary endpoints."""
+
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -15,6 +17,19 @@ from app.services.distill_service import summarize_single
 router = APIRouter(prefix="/bookmarks", tags=["bookmarks"])
 
 
+def _status_filter(status: str, include_discarded: bool) -> list[Any]:
+    """Resolve status to SQL filter. active=unreviewed only; kept=all non-discard."""
+    if include_discarded or status == "all":
+        return []
+    if status == "active":
+        return [Bookmark.status.in_(["unreviewed", "active"])]
+    if status == "kept":
+        return [Bookmark.status.in_(["unreviewed", "preview", "view", "active"])]
+    if status in ("discard", "discarded"):
+        return [Bookmark.status.in_(["discard", "discarded"])]
+    return [Bookmark.status == status]
+
+
 @router.get("", response_model=BookmarkListResponse)
 async def list_bookmarks(
     folder: str | None = None,
@@ -25,8 +40,9 @@ async def list_bookmarks(
     include_discarded: bool = False,
     db: AsyncSession = Depends(get_db),
 ) -> BookmarkListResponse:
-    """List stored bookmarks. Filter by folder, category, status."""
-    status_filter = [] if include_discarded or status == "all" else [Bookmark.status == status]
+    """List stored bookmarks. Filter by folder, category, status.
+    Status: active (all non-discard), discard, unreviewed, preview, view, all."""
+    status_filter = _status_filter(status, include_discarded)
     folder_filter = [Bookmark.folder == folder] if folder else []
     category_filter = [Bookmark.category == category] if category else []
 
@@ -57,6 +73,13 @@ class BulkIdsRequest(BaseModel):
     ids: list[int]
 
 
+class MoveToRequest(BaseModel):
+    """Request to move bookmarks to preview or view."""
+
+    ids: list[int]
+    status: str  # "preview" | "view"
+
+
 @router.delete("/{bookmark_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def discard_bookmark(
     bookmark_id: int,
@@ -67,7 +90,7 @@ async def discard_bookmark(
     bookmark = result.scalar_one_or_none()
     if not bookmark:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bookmark not found")
-    bookmark.status = "discarded"
+    bookmark.status = "discard"
     await db.commit()
 
 
@@ -76,33 +99,77 @@ async def discard_bookmarks_bulk(
     body: BulkIdsRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, int]:
-    """Bulk discard bookmarks by ID."""
+    """Bulk soft-delete (discard) bookmarks by ID. Reversible via restore-bulk."""
     discarded = 0
     for bid in body.ids:
         result = await db.execute(select(Bookmark).where(Bookmark.id == bid))
         b = result.scalar_one_or_none()
         if b:
-            b.status = "discarded"
+            b.status = "discard"
             discarded += 1
     await db.commit()
     return {"discarded": discarded}
 
 
-@router.post("/promote-bulk", status_code=status.HTTP_200_OK)
-async def promote_bookmarks_bulk(
+@router.post("/purge-bulk", status_code=status.HTTP_200_OK)
+async def purge_bookmarks_bulk(
     body: BulkIdsRequest,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, int]:
-    """Mark bookmarks for deeper review (promoted)."""
-    promoted = 0
+    """Permanently delete soft-deleted bookmarks. Only purges items in discard status. Irreversible."""
+    purged = 0
+    for bid in body.ids:
+        result = await db.execute(
+            select(Bookmark).where(
+                Bookmark.id == bid,
+                Bookmark.status.in_(["discard", "discarded"]),
+            )
+        )
+        b = result.scalar_one_or_none()
+        if b:
+            db.delete(b)
+            purged += 1
+    await db.commit()
+    return {"purged": purged}
+
+
+@router.post("/restore-bulk", status_code=status.HTTP_200_OK)
+async def restore_bookmarks_bulk(
+    body: BulkIdsRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, int]:
+    """Restore soft-deleted bookmarks from discard back to unreviewed."""
+    restored = 0
     for bid in body.ids:
         result = await db.execute(select(Bookmark).where(Bookmark.id == bid))
         b = result.scalar_one_or_none()
         if b:
-            b.status = "promoted"
-            promoted += 1
+            b.status = "unreviewed"
+            restored += 1
     await db.commit()
-    return {"promoted": promoted}
+    return {"restored": restored}
+
+
+@router.post("/move-bulk", status_code=status.HTTP_200_OK)
+async def move_bookmarks_bulk(
+    body: MoveToRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, int]:
+    """Move bookmarks to preview (AI fetch) or view (user's collection)."""
+    if body.status not in ("preview", "view"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="status must be 'preview' or 'view'",
+        )
+    moved = 0
+    for bid in body.ids:
+        result = await db.execute(select(Bookmark).where(Bookmark.id == bid))
+        b = result.scalar_one_or_none()
+        if b:
+            b.status = body.status
+            moved += 1
+    await db.commit()
+    return {"moved": moved}
 
 
 class SummarizeRequest(BaseModel):

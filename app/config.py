@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # Content fetching
     fetch_timeout_seconds: float = 30.0
     max_content_length: int = 100_000
+    jina_api_key: str | None = None  # Optional; higher rate limits when set
 
 
 settings = Settings()

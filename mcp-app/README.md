@@ -1,6 +1,28 @@
-# MCP App: Bookmark Review UI
+# MCP App: Bookmark Review UIs
 
-Improved bookmark review UI for bulk triage (discard / promote). Designed to receive data from the `distill` tool and call `discard_bookmarks` / `promote_bookmarks` via MCP.
+Two UIs for the bookmark workflow:
+
+| UI | When | Data source |
+|----|------|-------------|
+| **quick-pass.jsx** | Quick discard pass (before distill) | `list_bookmarks` |
+| **bookmark-review.jsx** | Deep review (after distill) | `distill` |
+
+## Quick Pass UI (`quick-pass.jsx`)
+
+Title/URL-only review for discarding obvious junk before running distill. Matches the Downloads example:
+
+- **Type badges** inferred from URL (Google Search, YouTube Short, Checkout/Cart, Untitled, etc.)
+- **Filter tabs** by type with counts
+- **Select all in view**
+- **Confirm discard** (copies IDs to clipboard or calls `onDiscard`)
+
+Data shape: `{ items: [{ id, title, url }], category?: string }` — matches `list_bookmarks` output.
+
+---
+
+## Bookmark Review UI (`bookmark-review.jsx`)
+
+Post-distill UI for bulk triage (discard / promote). Designed to receive data from the `distill` tool and call `discard_bookmarks` / `promote_bookmarks` via MCP.
 
 ## Improvements over Claude's version
 
@@ -34,20 +56,13 @@ Improved bookmark review UI for bulk triage (discard / promote). Designed to rec
 }
 ```
 
-## MCP integration path
+## MCP integration (wired up)
 
-1. Add `distill_review` tool that returns this shape (with bookmark ids).
-2. Register resource serving bundled HTML (React + `vite-plugin-singlefile`).
-3. Link tool via `_meta.ui.resourceUri`.
-4. In `ontoolresult`, pass brief to UI.
-5. UI calls `app.callServerTool("discard_bookmarks", { bookmark_ids })` and `promote_bookmarks` — no clipboard paste.
+The MCP server registers both UIs:
 
-## Running locally (preview)
+| Tool | Resource | Purpose |
+|------|----------|---------|
+| `quick_pass` | `quick-pass.html` | Quick discard by title/URL (before distill) |
+| `distill` | `bookmark-review.html` | Post-distill review with summaries |
 
-```bash
-cd mcp-app
-npm install
-npm run dev
-```
-
-Requires Vite + React setup (see MCP Apps SDK examples for full scaffold).
+Vanilla HTML files load the MCP Apps SDK from unpkg. No build step. The UIs call `app.callServerTool("discard_bookmarks", ...)` and `promote_bookmarks` when the host supports it; otherwise they copy IDs to clipboard.

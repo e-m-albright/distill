@@ -27,7 +27,7 @@ class OrganizeResult(BaseModel):
 
 def _get_client() -> Any:
     """Get Gemini client via Instructor."""
-    kwargs: dict[str, Any] = {"async_client": True, "mode": instructor.Mode.JSON}
+    kwargs: dict[str, Any] = {"async_client": True, "mode": instructor.Mode.GENAI_STRUCTURED_OUTPUTS}
     if settings.google_api_key:
         kwargs["api_key"] = settings.google_api_key
     return instructor.from_provider("google/gemini-2.5-flash", **kwargs)

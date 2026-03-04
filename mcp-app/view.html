@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, 'Segoe UI', sans-serif; }
+    .container { max-width: 720px; margin: 0 auto; padding: 20px 16px 100px; background: var(--color-background-primary, #f7f5f2); min-height: 100vh; color: var(--color-text-primary, #1c1917); }
+    .header { margin-bottom: 20px; }
+    .header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px; }
+    .header .meta { font-size: 13px; color: #a8a29e; margin: 8px 0 0; }
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .item { padding: 14px 16px; background: #fff; border-radius: 10px; border: 1px solid #e7e5e4; transition: all 0.15s; }
+    .item-title { font-size: 15px; font-weight: 600; color: #1c1917; }
+    .item-url { font-size: 12px; color: #78716c; word-break: break-all; margin-top: 4px; }
+    .item-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .item-actions button { padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid #e7e5e4; background: #fff; color: #57534e; }
+    .item-actions button:hover { background: #f5f5f4; }
+    .item-actions .open-btn { border-color: #78716c; color: #78716c; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1c1917; color: #fafaf9; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .loading { padding: 40px; text-align: center; color: #78716c; }
+  </style>
+</head>
+<body>
+  <div id="root" class="container">
+    <div class="loading">Waiting for view links…</div>
+  </div>
+  <script type="module">
+    import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps@0.4.0/app-with-deps";
+
+    let state = { items: [] };
+
+    function showToast(msg) {
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    function copyUrlFallback(url) {
+      navigator.clipboard?.writeText(url).then(() => showToast("URL copied")).catch(() => showToast("Copy failed"));
+    }
+
+    function render() {
+      const items = state.items || [];
+      const root = document.getElementById("root");
+      root.innerHTML = `
+        <header class="header">
+          <h1>View</h1>
+          <p class="meta">${items.length} links in your collection</p>
+        </header>
+        <div class="list">${items.map(b => `
+          <div class="item">
+            <div class="item-title">${b.title || "(no title)"}</div>
+            <div class="item-url">${(b.url || "").length > 70 ? b.url.slice(0, 70) + "…" : b.url}</div>
+            <div class="item-actions">
+              <button class="open-btn" data-url="${(b.url || "").replace(/"/g, "&quot;")}">Open</button>
+              <button data-url="${(b.url || "").replace(/"/g, "&quot;")}">Copy URL</button>
+            </div>
+          </div>
+        `).join("")}</div>
+      `;
+
+      root.querySelectorAll(".item-actions .open-btn").forEach(btn => {
+        btn.onclick = async (e) => {
+          e.stopPropagation();
+          const url = btn.dataset.url;
+          if (typeof app?.openLink === "function") {
+            const { isError } = await app.openLink({ url });
+            if (isError) copyUrlFallback(url);
+          } else {
+            copyUrlFallback(url);
+          }
+        };
+      });
+      root.querySelectorAll(".item-actions button:not(.open-btn)").forEach(btn => {
+        btn.onclick = (e) => { e.stopPropagation(); copyUrlFallback(btn.dataset.url); };
+      });
+    }
+
+    const app = new App({ name: "View", version: "1.0.0" });
+
+    app.ontoolresult = ({ content }) => {
+      const text = content?.find(c => c.type === "text");
+      if (text?.text) {
+        try {
+          const data = JSON.parse(text.text);
+          state.items = data.items || [];
+          render();
+        } catch (e) {
+          document.getElementById("root").innerHTML = `<div class="loading">Invalid data received.</div>`;
+        }
+      }
+    };
+
+    await app.connect();
+  </script>
+</body>
+</html>

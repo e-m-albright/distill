@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, 'Segoe UI', sans-serif; }
+    .container { max-width: 780px; margin: 0 auto; padding: 24px 16px 100px; background: var(--color-background-primary, #f7f5f2); min-height: 100vh; color: var(--color-text-primary, #1c1917); }
+    .header { margin-bottom: 20px; }
+    .header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px; }
+    .header .sub { font-size: 14px; color: var(--color-text-secondary, #78716c); margin: 0; line-height: 1.5; }
+    .header .hint { font-size: 13px; color: var(--color-text-tertiary, #a8a29e); margin: 6px 0 0; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid; cursor: pointer; font-size: 13px; background: transparent; color: #78716c; }
+    .filter-btn.active { border-color: #78716c; background: #e7e5e4; color: #1c1917; font-weight: 600; }
+    .select-all { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fff; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e7e5e4; }
+    .select-all input { width: 18px; height: 18px; cursor: pointer; accent-color: #78716c; }
+    .select-all span { font-size: 13px; color: #78716c; font-weight: 500; }
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; background: #fff; border-radius: 10px; border: 1px solid #e7e5e4; cursor: pointer; transition: all 0.1s; }
+    .item.selected { background: #fef2f2; border-color: #fca5a5; }
+    .item input { width: 18px; height: 18px; margin-top: 2px; cursor: pointer; flex-shrink: 0; accent-color: #78716c; }
+    .item-content { flex: 1; min-width: 0; }
+    .item-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .item-type { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #f5f5f4; color: #57534e; white-space: nowrap; }
+    .item-title { font-size: 15px; font-weight: 500; color: #1c1917; }
+    .item-url { font-size: 12px; color: #78716c; word-break: break-all; text-decoration: underline; }
+    .item-id { font-size: 11px; color: #a8a29e; flex-shrink: 0; }
+    .item-actions { display: flex; gap: 6px; margin-top: 6px; flex-shrink: 0; }
+    .item-actions button { padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; border: 1px solid #e7e5e4; background: #fff; color: #57534e; }
+    .item-actions button:hover { background: #f5f5f4; }
+    .item-actions .open-btn { border-color: #78716c; color: #78716c; }
+    .toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: #1c1917; color: #fafaf9; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 101; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1c1917; color: #fafaf9; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); z-index: 100; }
+    .action-bar button { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .action-bar .clear { border: 1px solid rgba(255,255,255,0.3); background: transparent; color: inherit; }
+    .action-bar .discard { border: none; background: #b91c1c; color: white; font-weight: 600; }
+    .action-bar .discard:disabled { opacity: 0.6; cursor: not-allowed; }
+    .loading { padding: 40px; text-align: center; color: #78716c; }
+  </style>
+</head>
+<body>
+  <div id="root" class="container">
+    <div class="loading">Waiting for bookmark data…</div>
+  </div>
+  <script type="module">
+    import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps@0.4.0/app-with-deps";
+
+    const TYPE_ORDER = ["All", "Google Search", "YouTube Short", "YouTube", "Checkout/Cart", "Untitled", "Article/Other"];
+
+    function inferType(url, title) {
+      const u = (url || "").toLowerCase();
+      const t = (title || "").toLowerCase();
+      if (u.includes("google.com/search")) return "Google Search";
+      if (u.includes("youtube.com/shorts") || u.includes("m.youtube.com/shorts")) return "YouTube Short";
+      if (u.includes("youtube.com/watch") || u.includes("m.youtube.com/watch")) return "YouTube";
+      if (u.includes("checkout") || u.includes("/cart") || u.includes("thank-you") || u.includes("/register")) return "Checkout/Cart";
+      if (!t || t === "(no title)" || t.trim() === "" || t === url) return "Untitled";
+      return "Article/Other";
+    }
+
+    let state = { items: [], category: "", checked: {}, filter: "All" };
+
+    function render() {
+      const itemsWithType = state.items.map(b => ({ ...b, type: inferType(b.url, b.title) }));
+      const typeCounts = { All: itemsWithType.length };
+      itemsWithType.forEach(b => { typeCounts[b.type] = (typeCounts[b.type] || 0) + 1; });
+      const filtered = state.filter === "All" ? itemsWithType : itemsWithType.filter(b => b.type === state.filter);
+      const selectedIds = Object.entries(state.checked).filter(([, v]) => v).map(([k]) => parseInt(k, 10));
+      const allFilteredSelected = filtered.length > 0 && filtered.every(b => state.checked[b.id]);
+
+      const typesToShow = TYPE_ORDER.filter(t => t === "All" || (typeCounts[t] || 0) > 0);
+
+      const root = document.getElementById("root");
+      root.innerHTML = `
+        <header class="header">
+          <h1>Triage — review by title/URL</h1>
+          <p class="sub">${itemsWithType.length} bookmarks${state.category ? ` in ${state.category}` : ""} · ${selectedIds.length} selected for discard</p>
+          <p class="hint">Select links to discard, then run preview on survivors.</p>
+        </header>
+        <div class="filters">${typesToShow.map(t => `<button class="filter-btn ${state.filter === t ? "active" : ""}" data-filter="${t}">${t} <span style="opacity:0.8">(${typeCounts[t] || 0})</span></button>`).join("")}</div>
+        <div class="select-all">
+          <input type="checkbox" ${allFilteredSelected ? "checked" : ""} id="toggleAll">
+          <span>Select all in view (${filtered.length})</span>
+        </div>
+        <div class="list">${filtered.map(b => `
+          <div class="item ${state.checked[b.id] ? "selected" : ""}" data-id="${b.id}">
+            <input type="checkbox" ${state.checked[b.id] ? "checked" : ""} data-id="${b.id}">
+            <div class="item-content">
+              <div class="item-row">
+                <span class="item-type">${b.type}</span>
+                <span class="item-title">${b.title || "(no title)"}</span>
+              </div>
+              <div class="item-url">${b.url.length > 90 ? b.url.slice(0, 90) + "…" : b.url}</div>
+              <div class="item-actions">
+                <button class="open-btn" data-url="${b.url.replace(/"/g, "&quot;")}">Open</button>
+                <button data-url="${b.url.replace(/"/g, "&quot;")}">Copy URL</button>
+              </div>
+            </div>
+            <span class="item-id">#${b.id}</span>
+          </div>
+        `).join("")}</div>
+        ${selectedIds.length > 0 ? `
+        <div class="action-bar" id="actionBar">
+          <span><strong>${selectedIds.length}</strong> selected for discard</span>
+          <div>
+            <button class="clear" id="btnClear">Clear</button>
+            <button class="discard" id="btnDiscard">Confirm discard (${selectedIds.length})</button>
+          </div>
+        </div>
+        ` : ""}
+      `;
+
+      root.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.onclick = () => { state.filter = btn.dataset.filter; render(); };
+      });
+      root.querySelector("#toggleAll")?.addEventListener("change", () => {
+        const allSelected = allFilteredSelected;
+        const update = {};
+        filtered.forEach(b => { update[b.id] = !allSelected; });
+        state.checked = { ...state.checked, ...update };
+        render();
+      });
+      root.querySelectorAll(".item").forEach(el => {
+        const id = parseInt(el.dataset.id, 10);
+        el.onclick = (e) => { if (!e.target.closest("button") && !e.target.closest(".item-actions")) { state.checked[id] = !state.checked[id]; render(); } };
+      });
+      root.querySelectorAll(".item input[type=checkbox]").forEach(cb => {
+        cb.onclick = (e) => { e.stopPropagation(); state.checked[parseInt(cb.dataset.id, 10)] = !state.checked[parseInt(cb.dataset.id, 10)]; render(); };
+      });
+      root.querySelectorAll(".item-actions .open-btn").forEach(btn => {
+        btn.onclick = async (e) => {
+          e.stopPropagation();
+          const url = btn.dataset.url;
+          if (typeof app?.openLink === "function") {
+            const { isError } = await app.openLink({ url });
+            if (isError) copyUrlFallback(url);
+          } else {
+            copyUrlFallback(url);
+          }
+        };
+      });
+      root.querySelectorAll(".item-actions button:not(.open-btn)").forEach(btn => {
+        btn.onclick = async (e) => {
+          e.stopPropagation();
+          copyUrlFallback(btn.dataset.url);
+        };
+      });
+      root.querySelector("#btnClear")?.addEventListener("click", () => { state.checked = {}; render(); });
+      root.querySelector("#btnDiscard")?.addEventListener("click", async () => {
+        const ids = Object.entries(state.checked).filter(([, v]) => v).map(([k]) => parseInt(k, 10));
+        if (ids.length === 0) return;
+        const btn = root.querySelector("#btnDiscard");
+        if (btn) { btn.disabled = true; btn.textContent = "Discarding…"; }
+        try {
+          const hasCall = typeof app?.callServerTool === "function";
+          if (hasCall) {
+            await app.callServerTool({ name: "discard_bookmarks", arguments: { bookmark_ids: ids } });
+            state.items = state.items.filter(b => !ids.includes(b.id));
+            showToast(`Discarded ${ids.length} bookmark${ids.length === 1 ? "" : "s"}`);
+          } else {
+            navigator.clipboard?.writeText(ids.join(", "));
+            showToast(`Copied ${ids.length} IDs — paste to Claude: discard_bookmarks([${ids.join(", ")}])`);
+          }
+        } catch (err) {
+          navigator.clipboard?.writeText(ids.join(", "));
+          showToast(`Copied IDs — paste to Claude: discard_bookmarks([${ids.join(", ")}])`);
+        }
+        state.checked = {};
+        if (btn) { btn.disabled = false; btn.textContent = `Confirm discard (${ids.length})`; }
+        render();
+      });
+    }
+
+    function copyUrlFallback(url) {
+      navigator.clipboard?.writeText(url).then(() => showToast("URL copied")).catch(() => showToast("Copy failed"));
+    }
+
+    function showToast(msg) {
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    const app = new App({ name: "Quick Pass", version: "1.0.0" });
+
+    app.ontoolresult = ({ content }) => {
+      const text = content?.find(c => c.type === "text");
+      if (text?.text) {
+        try {
+          const data = JSON.parse(text.text);
+          state.items = data.items || [];
+          state.category = data.category || "";
+          state.checked = {};
+          state.filter = "All";
+          render();
+        } catch (e) {
+          document.getElementById("root").innerHTML = `<div class="loading">Invalid data received.</div>`;
+        }
+      }
+    };
+
+    await app.connect();
+  </script>
+</body>
+</html>

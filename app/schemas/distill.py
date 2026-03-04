@@ -4,21 +4,19 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class BriefItemSchema(BaseModel):
-    """A single item in the distilled brief."""
+    """A single item in the preview."""
 
     title: str
     url: str
     summary: str
     key_points: list[str] = Field(default_factory=list)
-    keep: bool = True
+    view: bool = True
 
 
 class DistilledBriefSchema(BaseModel):
-    """Structured brief output."""
+    """Structured preview output (per-link only)."""
 
-    overview: str
     items: list[BriefItemSchema]
-    discarded_count: int = 0
 
 
 class IngestBookmarksResponse(BaseModel):

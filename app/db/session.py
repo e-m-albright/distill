@@ -46,6 +46,7 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_add_bookmark_status)
         await conn.run_sync(_migrate_add_group_and_cache)
+        await conn.run_sync(_migrate_status_values)
 
 
 def _migrate_add_bookmark_status(conn: "Connection") -> None:
@@ -72,6 +73,15 @@ def _migrate_add_group_and_cache(conn: "Connection") -> None:
         conn.execute(text("ALTER TABLE bookmarks ADD COLUMN cached_key_points TEXT"))
     if "cached_at" not in columns:
         conn.execute(text("ALTER TABLE bookmarks ADD COLUMN cached_at DATETIME"))
+
+
+def _migrate_status_values(conn: "Connection") -> None:
+    """Migrate status: active->unreviewed, discarded->discard, promoted->view."""
+    from sqlalchemy import text
+
+    conn.execute(text("UPDATE bookmarks SET status = 'unreviewed' WHERE status = 'active'"))
+    conn.execute(text("UPDATE bookmarks SET status = 'discard' WHERE status = 'discarded'"))
+    conn.execute(text("UPDATE bookmarks SET status = 'view' WHERE status = 'promoted'"))
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:
