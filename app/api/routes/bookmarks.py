@@ -9,14 +9,25 @@ from app.models.status import BookmarkStatus, StatusFilter
 from app.schemas.distill import BookmarkListResponse, BookmarkSchema, BriefItemSchema
 from app.services.bookmark_service import (
     discard_bookmarks as svc_discard,
+)
+from app.services.bookmark_service import (
     get_bookmark_by_id,
+)
+from app.services.bookmark_service import (
     list_bookmarks as svc_list,
+)
+from app.services.bookmark_service import (
     move_bookmarks as svc_move,
+)
+from app.services.bookmark_service import (
     purge_bookmarks as svc_purge,
+)
+from app.services.bookmark_service import (
     restore_bookmarks as svc_restore,
 )
 from app.services.cache_service import get_cached_summary, update_cache
 from app.services.distill_service import summarize_single
+
 
 router = APIRouter(prefix="/bookmarks", tags=["bookmarks"])
 

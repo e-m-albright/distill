@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.bookmark import Bookmark
 from app.models.status import BookmarkStatus, StatusFilter
+from app.services.bookmark_parser import BookmarkEntry
 from app.services.bookmark_service import (
     discard_bookmarks,
     get_status_summary,
@@ -14,7 +15,6 @@ from app.services.bookmark_service import (
     purge_bookmarks,
     restore_bookmarks,
 )
-from app.services.bookmark_parser import BookmarkEntry
 
 
 async def _seed(session: AsyncSession, count: int = 3) -> list[Bookmark]:

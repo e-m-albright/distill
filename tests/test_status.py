@@ -10,6 +10,7 @@ def test_resolve_active_returns_unreviewed() -> None:
 
 def test_resolve_kept_returns_non_discard() -> None:
     result = resolve_status_filter(StatusFilter.KEPT)
+    assert result is not None
     assert set(result) == {BookmarkStatus.UNREVIEWED, BookmarkStatus.PREVIEW, BookmarkStatus.VIEW}
 
 

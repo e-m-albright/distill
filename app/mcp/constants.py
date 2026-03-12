@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastmcp.server.apps import ResourceCSP, ResourcePermissions
 
+
 MCP_APP_DIR = Path(__file__).resolve().parent.parent.parent / "mcp-app"
 
 TRIAGE_URI = "ui://distillation/triage.html"
