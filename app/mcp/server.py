@@ -43,11 +43,10 @@ Always run list_groups first to show the full picture (total, organized, unorgan
 Always show URLs as markdown links [title](url). Be flexible: create groups, extract value per link, present findings, write artifacts when requested.""",
 )
 
-# Tool modules will be registered here by Task 6.
-# Once all tool modules exist, uncomment this block:
-# from app.mcp.tools import ingest, manage, organize, preview, triage, view
-# for module in [ingest, organize, triage, preview, manage, view]:
-#     module.register(mcp)
+from app.mcp.tools import ingest, manage, organize, preview, triage, view
+
+for module in [ingest, organize, triage, preview, manage, view]:
+    module.register(mcp)
 
 
 # Register UI resources
