@@ -4,7 +4,6 @@ import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, Depends, UploadFile
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -35,26 +34,9 @@ async def ingest_bookmarks(
     else:
         entries = list(parse_netscape_html(content))
 
-    ingested = 0
-    for entry in entries:
-        if not entry.url or not entry.url.startswith("http"):
-            continue
-        # Upsert by URL
-        result = await db.execute(select(Bookmark).where(Bookmark.url == entry.url))
-        existing = result.scalar_one_or_none()
-        if not existing:
-            db.add(
-                Bookmark(
-                    url=entry.url,
-                    title=entry.title,
-                    folder=entry.folder,
-                    added=entry.added,
-                ),
-            )
-            ingested += 1
-
-    await db.commit()
-    return IngestBookmarksResponse(ingested=ingested, total=len(entries))
+    from app.services.bookmark_service import ingest_bookmarks as svc_ingest
+    new_count, total = await svc_ingest(db, entries)
+    return IngestBookmarksResponse(ingested=new_count, total=total)
 
 
 @router.post("/distill", response_model=DistilledBriefSchema)
