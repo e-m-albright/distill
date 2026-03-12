@@ -78,7 +78,7 @@ async def _init_and_run() -> None:
     from app.db.session import init_db
 
     await init_db()
-    mcp.run(transport="stdio", show_banner=False)
+    await mcp.run_async(transport="stdio", show_banner=False)
 
 
 if __name__ == "__main__":
