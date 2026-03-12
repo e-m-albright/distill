@@ -46,3 +46,24 @@ def test_parse_chrome_json() -> None:
     assert len(entries) == 1
     assert entries[0].url == "https://example.com"
     assert entries[0].title == "Example"
+
+
+def test_parse_netscape_html_empty() -> None:
+    """Empty/minimal HTML returns no entries."""
+    entries = list(parse_netscape_html(""))
+    assert entries == []
+
+
+def test_parse_netscape_html_no_links() -> None:
+    """HTML with no links returns no entries."""
+    html = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+    <DL><DT><H3>Empty Folder</H3><DL></DL></DL>"""
+    entries = list(parse_netscape_html(html))
+    assert entries == []
+
+
+def test_parse_chrome_json_empty_roots() -> None:
+    """Chrome JSON with empty roots returns no entries."""
+    data = '{"roots": {"bookmark_bar": {"children": []}}}'
+    entries = list(parse_chrome_json(data))
+    assert entries == []
