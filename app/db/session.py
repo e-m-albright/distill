@@ -44,12 +44,12 @@ async def init_db() -> None:
     """Create all tables and run migrations."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await conn.run_sync(_migrate_add_bookmark_status)
-        await conn.run_sync(_migrate_add_group_and_cache)
-        await conn.run_sync(_migrate_status_values)
+        await conn.run_sync(_ensure_status_column)
+        await conn.run_sync(_ensure_category_and_cache_columns)
+        await conn.run_sync(_normalize_legacy_status_values)
 
 
-def _migrate_add_bookmark_status(conn: "Connection") -> None:
+def _ensure_status_column(conn: "Connection") -> None:
     """Add status column to bookmarks if it doesn't exist."""
     from sqlalchemy import text
 
@@ -59,7 +59,7 @@ def _migrate_add_bookmark_status(conn: "Connection") -> None:
         conn.execute(text("ALTER TABLE bookmarks ADD COLUMN status VARCHAR(32) DEFAULT 'active'"))
 
 
-def _migrate_add_group_and_cache(conn: "Connection") -> None:
+def _ensure_category_and_cache_columns(conn: "Connection") -> None:
     """Add group and cache columns if missing."""
     from sqlalchemy import text
 
@@ -75,7 +75,7 @@ def _migrate_add_group_and_cache(conn: "Connection") -> None:
         conn.execute(text("ALTER TABLE bookmarks ADD COLUMN cached_at DATETIME"))
 
 
-def _migrate_status_values(conn: "Connection") -> None:
+def _normalize_legacy_status_values(conn: "Connection") -> None:
     """Migrate status: active->unreviewed, discarded->discard, promoted->view."""
     from sqlalchemy import text
 

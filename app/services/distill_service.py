@@ -132,15 +132,24 @@ Content:
             messages=[{"role": "user", "content": prompt}],
             response_model=DistilledBrief,
         )
-        # Map back to original order
         idx_to_item = {indices[j]: brief.items[j] for j in range(len(brief.items))}
-        for i, item in youtube_items:
-            idx_to_item[i] = item
-        ordered_items = [idx_to_item[i] for i in sorted(idx_to_item)]
-        return DistilledBrief(items=ordered_items)
     except Exception as e:
         log.exception("distill_failed", error=str(e))
-        raise
+        # Create failure items for all text contents instead of crashing
+        idx_to_item = {}
+        for i, c in text_contents:
+            idx_to_item[i] = BriefItem(
+                title=c.title or c.url,
+                url=c.url,
+                summary="Failed to process",
+                key_points=[],
+                view=False,
+            )
+
+    for i, item in youtube_items:
+        idx_to_item[i] = item
+    ordered_items = [idx_to_item[i] for i in sorted(idx_to_item)]
+    return DistilledBrief(items=ordered_items)
 
 
 async def summarize_single(
