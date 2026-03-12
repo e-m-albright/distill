@@ -6,6 +6,7 @@ from sqlalchemy import DateTime, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.models.status import BookmarkStatus
 
 
 class Bookmark(Base):
@@ -19,7 +20,7 @@ class Bookmark(Base):
     folder: Mapped[str] = mapped_column(String(512), default="")
     added: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(
-        String(32), default="unreviewed"
+        String(32), default=BookmarkStatus.UNREVIEWED
     )  # unreviewed | discard | preview | view
     category: Mapped[str] = mapped_column(String(128), default="", index=True)  # user/AI group
     cached_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
