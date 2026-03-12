@@ -46,7 +46,7 @@ dev:
 
 # Run MCP server (stdio) for Claude Desktop
 mcp:
-    uv run python -m app.mcp_server
+    uv run python -m app.mcp.server
 
 # Start with specific port
 dev-port port="8000":
