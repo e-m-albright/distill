@@ -1,6 +1,8 @@
 # Distillation
 
-Bookmark and content distillation — tame information overload. Ingest exports, organize into categories, triage, preview (AI summarize), and curate a view collection.
+> **Status: Experiment / One-off tool.** Built to clean up a massive Chrome bookmark backlog. May be useful again for future bookmark purges but not actively maintained.
+
+Bookmark and content distillation -- tame information overload. Ingest exports, organize into categories, triage, preview (AI summarize), and curate a view collection.
 
 ## Quick Start
 
